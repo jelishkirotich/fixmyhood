@@ -48,6 +48,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  z-index: 2000;
 }
 .sheet-backdrop {
   position: fixed;
@@ -55,15 +56,18 @@
   background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: flex-end;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .sheet {
   background: white;
+  color: #1a1a18;
   width: 100%;
   border-radius: 16px 16px 0 0;
   padding: 20px;
   box-sizing: border-box;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .sheet h2 {
@@ -163,6 +167,7 @@ textarea {
   border-radius: 20px;
   border: 1px solid #d3d1c7;
   background: white;
+  color: #1a1a18;
   white-space: nowrap;
   cursor: pointer;
 }

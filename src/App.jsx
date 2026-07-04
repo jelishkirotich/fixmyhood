@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from './components/TopBar'
 import MapView from './components/MapView'
 import ReportForm from './components/ReportForm'
@@ -10,28 +10,40 @@ import './App.css'
 function App() {
   const { location, status } = useLocation()
   const [showForm, setShowForm] = useState(false)
-  const [reports, setReports] = useState(loadReports)
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('all')
 
-  function handleSubmit(formData) {
+  useEffect(() => {
+    loadReports().then((data) => {
+      setReports(data)
+      setLoading(false)
+    })
+  }, [])
+
+  async function handleSubmit(formData) {
     const newReport = {
-      id: crypto.randomUUID(),
       category: formData.category,
       description: formData.description,
       lat: location.lat,
       lng: location.lng,
       upvotes: 0,
     }
-    const updated = saveReport(reports, newReport)
-    setReports(updated)
+    const saved = await saveReport(newReport)
+    if (saved) {
+      setReports((prev) => [saved, ...prev])
+    }
     setShowForm(false)
   }
 
-  function handleUpvote(id) {
-    const updated = upvoteReport(reports, id)
-    setReports(updated)
-    setSelected(updated.find((r) => r.id === id))
+  async function handleUpvote(id) {
+    const report = reports.find((r) => r.id === id)
+    const updated = await upvoteReport(id, report.upvotes)
+    if (updated) {
+      setReports((prev) => prev.map((r) => (r.id === id ? updated : r)))
+      setSelected(updated)
+    }
   }
 
   let visibleReports = reports
@@ -50,6 +62,8 @@ function App() {
       ) : (
         <p>Finding your location…</p>
       )}
+
+      {loading && <p style={{ padding: '8px 16px' }}>Loading reports…</p>}
 
       <div className="filter-row">
         <button className={filter === 'all' ? 'chip chip-active' : 'chip'} onClick={() => setFilter('all')}>

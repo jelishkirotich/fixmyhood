@@ -1,28 +1,49 @@
-import { mockReports } from '../data/mockReports'
+import { supabase } from './supabaseClient'
 
-const STORAGE_KEY = 'fixmyhood_reports'
+export async function loadReports() {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-export function loadReports() {
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved) return JSON.parse(saved)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockReports))
-  return mockReports
+  if (error) {
+    console.error('Error loading reports:', error)
+    return []
+  }
+  return data
 }
 
-export function saveReport(reports, newReport) {
-  const updated = [newReport, ...reports]
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-  return updated
+export async function saveReport(newReport) {
+  const { data, error } = await supabase
+    .from('reports')
+    .insert([newReport])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error saving report:', error)
+    return null
+  }
+  return data
 }
-export function upvoteReport(reports, id) {
-  const updated = reports.map((r) =>
-    r.id === id ? { ...r, upvotes: r.upvotes + 1 } : r
-  )
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-  return updated
+
+export async function upvoteReport(id, currentUpvotes) {
+  const { data, error } = await supabase
+    .from('reports')
+    .update({ upvotes: currentUpvotes + 1 })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error upvoting report:', error)
+    return null
+  }
+  return data
 }
+
 export function distanceKm(a, b) {
-  const R = 6371 // Earth's radius in km
+  const R = 6371
   const dLat = ((b.lat - a.lat) * Math.PI) / 180
   const dLng = ((b.lng - a.lng) * Math.PI) / 180
   const x =
