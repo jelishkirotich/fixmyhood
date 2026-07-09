@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import TopBar from './components/TopBar'
-import MapView from './components/MapView'
-import ReportForm from './components/ReportForm'
-import ReportDetail from './components/ReportDetail'
+import BottomNav from './components/BottomNav'
+import HomePage from './pages/HomePage'
+import MapPage from './pages/MapPage'
+import ReportPage from './pages/ReportPage'
+import MyReportsPage from './pages/MyReportsPage'
+import ProfilePage from './pages/ProfilePage'
 import useLocation from './lib/useLocation'
-import { loadReports, saveReport, upvoteReport, distanceKm } from './lib/reports'
+import { loadReports, saveReport, upvoteReport } from './lib/reports'
 import './App.css'
 
 function App() {
-  const { location, status } = useLocation()
-  const [showForm, setShowForm] = useState(false)
+  const { location } = useLocation()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState(null)
-  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     loadReports().then((data) => {
@@ -23,18 +24,16 @@ function App() {
   }, [])
 
   async function handleSubmit(formData) {
-    const newReport = {
+    const saved = await saveReport({
       category: formData.category,
       description: formData.description,
       lat: location.lat,
       lng: location.lng,
-      upvotes: 0,
-    }
-    const saved = await saveReport(newReport)
+      photoFiles: formData.photoFiles,
+    })
     if (saved) {
       setReports((prev) => [saved, ...prev])
     }
-    setShowForm(false)
   }
 
   async function handleUpvote(id) {
@@ -42,50 +41,31 @@ function App() {
     const updated = await upvoteReport(id, report.upvotes)
     if (updated) {
       setReports((prev) => prev.map((r) => (r.id === id ? updated : r)))
-      setSelected(updated)
     }
-  }
-
-  let visibleReports = reports
-  if (filter === 'mostUpvoted') {
-    visibleReports = [...reports].sort((a, b) => b.upvotes - a.upvotes)
-  }
-  if (filter === 'nearMe' && location) {
-    visibleReports = reports.filter((r) => distanceKm(location, r) <= 2)
   }
 
   return (
     <div className="app-shell">
       <TopBar />
-      {location ? (
-        <MapView center={location} reports={visibleReports} onSelect={setSelected} />
-      ) : (
-        <p>Finding your location…</p>
-      )}
 
-      {loading && <p style={{ padding: '8px 16px' }}>Loading reports…</p>}
-
-      <div className="filter-row">
-        <button className={filter === 'all' ? 'chip chip-active' : 'chip'} onClick={() => setFilter('all')}>
-          All
-        </button>
-        <button className={filter === 'mostUpvoted' ? 'chip chip-active' : 'chip'} onClick={() => setFilter('mostUpvoted')}>
-          Most upvoted
-        </button>
-        <button className={filter === 'nearMe' ? 'chip chip-active' : 'chip'} onClick={() => setFilter('nearMe')}>
-          Near me
-        </button>
+      <div className="page-content">
+        {loading ? (
+          <p style={{ padding: '16px' }}>Loading…</p>
+        ) : (
+          <Routes>
+            <Route path="/" element={<HomePage reports={reports} />} />
+            <Route
+              path="/map"
+              element={<MapPage location={location} reports={reports} onUpvote={handleUpvote} />}
+            />
+            <Route path="/report" element={<ReportPage onSubmit={handleSubmit} />} />
+            <Route path="/my-reports" element={<MyReportsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Routes>
+        )}
       </div>
 
-      <button className="fab" onClick={() => setShowForm(true)}>
-        + Report
-      </button>
-      {showForm && (
-        <ReportForm onCancel={() => setShowForm(false)} onSubmit={handleSubmit} />
-      )}
-      {selected && (
-        <ReportDetail report={selected} onClose={() => setSelected(null)} onUpvote={handleUpvote} />
-      )}
+      <BottomNav />
     </div>
   )
 }

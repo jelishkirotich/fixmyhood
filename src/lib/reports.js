@@ -13,10 +13,44 @@ export async function loadReports() {
   return data
 }
 
-export async function saveReport(newReport) {
+async function uploadPhoto(file) {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${crypto.randomUUID()}.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('report-photos')
+    .upload(fileName, file)
+
+  if (uploadError) {
+    console.error('Error uploading photo:', uploadError)
+    return null
+  }
+
+  const { data } = supabase.storage
+    .from('report-photos')
+    .getPublicUrl(fileName)
+
+  return data.publicUrl
+}
+
+async function uploadPhotos(files) {
+  const uploadedUrls = []
+  for (const file of files) {
+    const url = await uploadPhoto(file)
+    if (url) uploadedUrls.push(url)
+  }
+  return uploadedUrls
+}
+
+export async function saveReport({ category, description, lat, lng, photoFiles }) {
+  let photoUrls = []
+  if (photoFiles && photoFiles.length > 0) {
+    photoUrls = await uploadPhotos(photoFiles)
+  }
+
   const { data, error } = await supabase
     .from('reports')
-    .insert([newReport])
+    .insert([{ category, description, lat, lng, upvotes: 0, photo_urls: photoUrls }])
     .select()
     .single()
 
